@@ -8,11 +8,12 @@
 // Output is JavaScript
 header( 'Content-Type: text/javascript', true );
 
+session_start();
 
 // Set the Timezone, to make sure 'date()' does not complain.
 date_default_timezone_set('Europe/Brussels');
 
-$bForce      = (empty($_REQUEST['force'])) ? 0 : 1;
+$bForce = (empty($_REQUEST['force'])) ? 0 : 1;
 
 $xbmc_title = "";
 $xbmc_artist = "";
@@ -23,9 +24,6 @@ getXBMCData();
 
 if ($xbmc_title == "")
 {
-  // Write variables to session variable (This blocks other PHP processes so keep it short...
-  session_start();
-
   $Session_Electricity_Used = -1;
   $Session_Gas_Used = -1;
   $Session_Electricity_Usage = -1;
@@ -36,23 +34,19 @@ if ($xbmc_title == "")
     $Session_Gas_Used = $_SESSION['Gas_Used'];
     $Session_Electricity_Usage = $_SESSION['Electricity_Usage'];
   }
-  
-  session_write_close();
 
   // Get values from mysql datebase
   $mysqllink = mysql_connect(localhost, "domotica", "b-2020");
-  mysql_select_db("domotica") ;
+  mysql_select_db("domotica");
   $FirstRun=1;
   $Timeout=5;
 
-  // Wait for a change in the database or a playing XMBC before continuing.
-  while (($FirstRun==1) || (($Session_Electricity_Used == $Electricity_Used) && ($Session_Gas_Used == $Gas_Used) &&  ($Session_Electricity_Usage == $Electricity_Usage) && ($Timeout > 0) && ($xbmc_title == "") && (!$bForce)))
-  {
-    if ($FirstRun == 0)
-    {
-      sleep(5);
-    }
 
+  // Wait for a change in the database or a playing XMBC before continuing.
+//  while (($Session_Electricity_Used == $Electricity_Used) && ($Session_Gas_Used == $Gas_Used) &&  ($Session_Electricity_Usage == $Electricity_Usage) && ($Timeout > 0) && ($xbmc_title == ""))  
+  $FirstRun = 1;
+  while (($FirstRun) || (($Timeout != 0) && ($Session_Electricity_Usage == $Electricity_Usage)))
+  {
     $mysqlresult = mysql_query('SELECT * FROM energy ORDER BY id DESC LIMIT 1;') or die(mysql_error());
     $Electricity_Used=mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2");
     $Gas_Used=mysql_result($mysqlresult, 0, "gas_used");
@@ -60,10 +54,21 @@ if ($xbmc_title == "")
     $FirstRun = 0;
     $Timeout -= 1;
     getXBMCData();
+//    echo $Session_Electricity_Usage."  ".$Electricity_Usage."<BR>";
+
+    if ($bForce == 1) 
+    {
+      $Timeout = 0;
+    }
+    else
+    {
+      sleep(5);
+    }
+    $FirstRun = 0;
   }
 
   // Get all the other values from the domotica database  if Gas_Used or Electricity_Used has changed, but only when XMBC is not playing...
-  if (($bForce) || ($Session_Electricity_Used == $Electricity_Used) || ($Session_Gas_Used == $Gas_Used) ||  ($Session_Electricity_Usage == $Electricity_Usage) || ($xbmc_title == ""))
+  if (($bForce) || ($Session_Electricity_Used != $Electricity_Used) || ($Session_Gas_Used != $Gas_Used) || ($xbmc_title != ""))
   {
     $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= timestampadd(hour, -1, now()) LIMIT 1");
     $Electricity_Used_Hour=$Electricity_Used - (mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2"));
@@ -85,31 +90,6 @@ if ($xbmc_title == "")
     $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= CURDATE()-365 LIMIT 1");
     $Electricity_Used_Year=$Electricity_Used - (mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2"));
     $Gas_Used_Year=$Gas_Used - mysql_result($mysqlresult, 0, "gas_used");
-
-    // Write variables to session variable (This blocks other PHP processes so keep it short...
-
-    $_SESSION['Electricity_Used_Hour']=$Electricity_Used_Hour;
-    $_SESSION['Gas_Used_Hour']=$Gas_Used_Hour;
-    $_SESSION['Gas_Usage']=$Gas_Usage;
-
-    $_SESSION['Electricity_Used_Today']=$Electricity_Used_Today;
-    $_SESSION['Gas_Used_Today']=$Gas_Used_Today;
-
-    $_SESSION['Electricity_Used_Week']=$Electricity_Used_Week;
-    $_SESSION['Gas_Used_Week']=$Gas_Used_Week;
-
-    $_SESSION['Electricity_Used_Month']=$Electricity_Used_Month;
-    $_SESSION['Gas_Used_Month']=$Gas_Used_Month;
-
-    $_SESSION['Electricity_Used_Year']=$Electricity_Used_Year;
-    $_SESSION['Gas_Used_Year']=$Gas_Used_Year;
-
-    $_SESSION['Electricity_Usage']=$Electricity_Usage;
-    $_SESSION['Electricity_Used']=$Electricity_Used;
-    $_SESSION['Gas_Used']=$Gas_Used;
-
-
-    session_write_close();
   }
   else
   {
@@ -129,10 +109,7 @@ if ($xbmc_title == "")
     $Electricity_Used_Year = $_SESSION['Electricity_Used_Year'];
     $Gas_Used_Year = $_SESSION['Gas_Used_Year'];
 
-    session_write_close();
   }
-
-
 
   $mysqlresult = mysql_query('SELECT * FROM temperature ORDER BY id DESC LIMIT 1;');
   $Temp_Livingroom=mysql_result($mysqlresult, 0, "temp_livingroom");
@@ -153,7 +130,7 @@ if ($xbmc_title == "")
 // If XMBC Running act as Media Center Display
 if (!empty($xbmc_title) && ($xbmc_title !== ""))
 {
-  $ostr = $ostr."Media Center<BR><BR>";
+  $ostr = "Media Center<BR><BR>";
   if (!empty($xbmc_title))  $ostr = $ostr.htmlspecialchars($xbmc_title, ENT_QUOTES)."<BR><BR>";
   if (!empty($xbmc_artist)) $ostr = $ostr.htmlspecialchars($xbmc_artist, ENT_QUOTES)."<BR><BR>";
   $ostr = $ostr.$xbmc_current_time." / ".$xbmc_total_time."<BR><BR>";
@@ -163,7 +140,7 @@ if (!empty($xbmc_title) && ($xbmc_title !== ""))
 else
 {
   // Print Temperatures
-  $ostr = $ostr."<TABLE BORDER=0 WIDTH=480 style=\"table-layout: fixed;\">";
+  $ostr = "<TABLE BORDER=0 WIDTH=480 style=\"table-layout: fixed;\">";
   $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"70\" ALIGN=CENTER>Living</TD><TD ALIGN=CENTER>Hal</TD><TD ALIGN=CENTER>Vissen</TD></TR>";
   $ostr = $ostr."<TD ALIGN=CENTER>".$Temp_Livingroom."</TD><TD ALIGN=CENTER>".$Temp_Hal."</TD><TD ALIGN=CENTER>".$Temp_Fishtank."</TD></TR>";
   $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"70\" ALIGN=CENTER>Bad</TD><TD ALIGN=CENTER>Slaap</TD><TD ALIGN=CENTER>Buiten</TD></TR>";
@@ -180,26 +157,25 @@ else
 }
 
 // Write variables to session variable (This blocks other PHP processes so keep it short...
+$_SESSION['Electricity_Used_Hour']=$Electricity_Used_Hour;
+$_SESSION['Gas_Used_Hour']=$Gas_Used_Hour;
+$_SESSION['Gas_Usage']=$Gas_Usage;
 
-    $_SESSION['Electricity_Used_Hour']=$Electricity_Used_Hour;
-    $_SESSION['Gas_Used_Hour']=$Gas_Used_Hour;
-    $_SESSION['Gas_Usage']=$Gas_Usage;
+$_SESSION['Electricity_Used_Today']=$Electricity_Used_Today;
+$_SESSION['Gas_Used_Today']=$Gas_Used_Today;
 
-    $_SESSION['Electricity_Used_Today']=$Electricity_Used_Today;
-    $_SESSION['Gas_Used_Today']=$Gas_Used_Today;
+$_SESSION['Electricity_Used_Week']=$Electricity_Used_Week;
+$_SESSION['Gas_Used_Week']=$Gas_Used_Week;
 
-    $_SESSION['Electricity_Used_Week']=$Electricity_Used_Week;
-    $_SESSION['Gas_Used_Week']=$Gas_Used_Week;
+$_SESSION['Electricity_Used_Month']=$Electricity_Used_Month;
+$_SESSION['Gas_Used_Month']=$Gas_Used_Month;
 
-    $_SESSION['Electricity_Used_Month']=$Electricity_Used_Month;
-    $_SESSION['Gas_Used_Month']=$Gas_Used_Month;
+$_SESSION['Electricity_Used_Year']=$Electricity_Used_Year;
+$_SESSION['Gas_Used_Year']=$Gas_Used_Year;
 
-    $_SESSION['Electricity_Used_Year']=$Electricity_Used_Year;
-    $_SESSION['Gas_Used_Year']=$Gas_Used_Year;
-
-    $_SESSION['Electricity_Usage']=$Electricity_Usage;
-    $_SESSION['Electricity_Used']=$Electricity_Used;
-    $_SESSION['Gas_Used']=$Gas_Used;
+$_SESSION['Electricity_Usage']=$Electricity_Usage;
+$_SESSION['Electricity_Used']=$Electricity_Used;
+$_SESSION['Gas_Used']=$Gas_Used;
 
 
 session_write_close();
