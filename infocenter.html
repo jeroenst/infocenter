@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jst Info Center</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript">
+
+    function ajaxCallback(oA, sTextStatus, oB) {
+        // The arguments oA and oB contain different things depending on
+        // success or error. It doesn't matter, we don't use them.
+        if ( 'success' == sTextStatus ) {
+            // start next update right away. Settings from $.ajaxSetup are
+            // used.
+            $.ajax();
+        }
+        else {
+            // An error was returned from the server.
+            // Wait a half second before next update to prevent very fast
+            // looping.
+            window.setTimeout( $.ajax   // reference to function, no () here!
+                             , 500      // milliseconds, 0.5 sec
+                             );
+        }
+    }
+
+
+	function GetClock(){
+	d = new Date();
+	nday   = d.getDay();
+	nmonth = d.getMonth() + 1;
+	ndate  = d.getDate();
+	nyear = d.getYear();
+	nhour  = d.getHours();
+	nmin   = d.getMinutes();
+	nsec   = d.getSeconds();
+
+	if(nyear<1000) nyear=nyear+1900;
+
+     
+	     if(nmin <= 9) {nmin = "0" +nmin;}
+	     if(nsec <= 9) {nsec = "0" +nsec;}
+	     if(nmonth <= 9) {nmonth = "0" +nmonth;}
+	     if(ndate <= 9) {ndate = "0" +ndate;}
+     
+	     
+	     document.getElementById('clockbox').innerHTML=""+nhour+":"+nmin+":"+nsec+" "+ndate+"-"+nmonth+"-"+nyear+"";
+        }
+
+
+        $(document).ready( function() {
+
+     	    GetClock();
+
+            
+     	    setInterval( GetClock, 1000);
+
+            // The code below is executed when the document finished loading
+
+
+        // Setup the settings for jQuery Ajax. This way we don't need to
+        // pass them each time we do a call.
+        $.ajaxSetup({
+            'url':     'infocenterserver.php'   // URL of the Ajax server
+            , 'cache':   false          // will add ?_=[number] to the url
+            , 'timeout': 150000         // milliseconds, 2.5 min
+            , 'success':  ajaxCallback  // reference to function, no () here!
+            , 'error':    ajaxCallback  // reference to function, no () here!
+        });
+
+        // Execute the first Ajax request. Settings from $.ajaxSetup are
+        // used.
+        // For the first request we set the 'force' parameter to make the
+        // server
+        // not wait for a change but send an update as soon as possible.
+        $.ajax({
+            'data': { 'force': 1 }
+        });
+            
+     	    
+        });
+
+    </script>
+
+     <style type="text/css">
+	BODY {background-color:#000000; color:#77EEFF; word-wrap: break-word; overflow:hidden; margin: 0px 0px 0px 0px; text-align: center; font-size:30pt;}
+	HTML {width:480px; height:700px; overflow:hidden;}
+    </style>
+</head>
+
+    <div id="clockbox"></div>
+    <div id="loadinfo">Loading...</div>
+
+
+</body>
+</html>
