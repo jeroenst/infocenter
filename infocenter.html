@@ -61,7 +61,7 @@
         // Setup the settings for jQuery Ajax. This way we don't need to
         // pass them each time we do a call.
         $.ajaxSetup({
-            'url':     'server.php'   // URL of the Ajax server
+            'url':     'infocenterserver.php'   // URL of the Ajax server
             , 'cache':   false          // will add ?_=[number] to the url
             , 'timeout': 150000         // milliseconds, 2.5 min
             , 'success':  ajaxCallback  // reference to function, no () here!
@@ -85,6 +85,7 @@
 	HTML {width:480px; height:700px; overflow:hidden;}
     </style>
 </head>
+<body>
 
     <div id="clockbox"></div>
     <div id="loadinfo">Loading...</div>

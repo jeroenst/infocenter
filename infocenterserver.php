@@ -47,14 +47,22 @@ if ($xbmc_title == "")
   $FirstRun = 1;
   while (($FirstRun) || (($Timeout != 0) && ($Session_Electricity_Usage == $Electricity_Usage)))
   {
-    $mysqlresult = mysql_query('SELECT * FROM energy ORDER BY id DESC LIMIT 1;') or die(mysql_error());
+    $mysqlresult = mysql_query('SELECT * FROM energy  WHERE `timestamp` >= timestampadd(minute, -1, now()) ORDER BY id DESC LIMIT 1;');
+    if (($mysqlresult) && (mysql_num_rows($mysqlresult)))
+    {
     $Electricity_Used=mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2");
     $Gas_Used=mysql_result($mysqlresult, 0, "gas_used");
     $Electricity_Usage=mysql_result($mysqlresult, 0, "watt_usage");
     $FirstRun = 0;
     $Timeout -= 1;
+
+    }
+    else
+    {
+      $Timeout = 0;
+    }
+
     getXBMCData();
-//    echo $Session_Electricity_Usage."  ".$Electricity_Usage."<BR>";
 
     if ($bForce == 1) 
     {
@@ -64,9 +72,12 @@ if ($xbmc_title == "")
     {
       sleep(5);
     }
+
     $FirstRun = 0;
   }
 
+  if ($Electricity_Used != "")
+  {
   // Get all the other values from the domotica database  if Gas_Used or Electricity_Used has changed, but only when XMBC is not playing...
   if (($bForce) || ($Session_Electricity_Used != $Electricity_Used) || ($Session_Gas_Used != $Gas_Used) || ($xbmc_title != ""))
   {
@@ -110,15 +121,49 @@ if ($xbmc_title == "")
     $Gas_Used_Year = $_SESSION['Gas_Used_Year'];
 
   }
+  }
+  else
+  {
+    $Electricity_Used = 0;
+    $Gas_Used = 0;
+    $Electricity_Usage = 0;
+      
+    $Electricity_Used_Hour = 0;
+    $Gas_Used_Hour = 0;
+    $Gas_Usage = 0;
 
-  $mysqlresult = mysql_query('SELECT * FROM temperature ORDER BY id DESC LIMIT 1;');
-  $Temp_Livingroom=mysql_result($mysqlresult, 0, "temp_livingroom");
-  $Temp_Hal=mysql_result($mysqlresult, 0, "temp_hal");
-  $Temp_Outside=mysql_result($mysqlresult, 0, "temp_outside");
-  $Temp_FishTank=mysql_result($mysqlresult, 0, "temp_fishtank");
-  $Temp_Bathroom=mysql_result($mysqlresult, 0, "temp_bathroom");
-  $Temp_Bedroom=mysql_result($mysqlresult, 0, "temp_bedroom");
+    $Electricity_Used_Today = 0;
+    $Gas_Used_Today = 0;
 
+    $Electricity_Used_Week = 0;
+    $Gas_Used_Week = 0;
+
+    $Electricity_Used_Month = 0;
+    $Gas_Used_Month = 0;
+
+    $Electricity_Used_Year = 0;
+    $Gas_Used_Year = 0;
+  }
+
+  $mysqlresult = mysql_query('SELECT * FROM temperature  WHERE `timestamp` >= timestampadd(minute, -5, now()) ORDER BY id DESC LIMIT 1;');
+  if (($mysqlresult) && (mysql_num_rows($mysqlresult)))
+  {
+    $Temp_Livingroom=mysql_result($mysqlresult, 0, "temp_livingroom");
+    $Temp_Hal=mysql_result($mysqlresult, 0, "temp_hal");
+    $Temp_Outside=mysql_result($mysqlresult, 0, "temp_outside");
+    $Temp_FishTank=mysql_result($mysqlresult, 0, "temp_fishtank");
+    $Temp_Bathroom=mysql_result($mysqlresult, 0, "temp_bathroom");
+    $Temp_Bedroom=mysql_result($mysqlresult, 0, "temp_bedroom");
+  }
+  else
+  {
+    $Temp_Livingroom=0;
+    $Temp_Hal=0;
+    $Temp_Outside=0;
+    $Temp_FishTank=0;
+    $Temp_Bathroom=0;
+    $Temp_Bedroom=0;
+  }
   // Free resultset
   mysql_free_result($mysqlresult);
 
@@ -142,7 +187,7 @@ else
   // Print Temperatures
   $ostr = "<TABLE BORDER=0 WIDTH=480 style=\"table-layout: fixed;\">";
   $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"70\" ALIGN=CENTER>Living</TD><TD ALIGN=CENTER>Hal</TD><TD ALIGN=CENTER>Vissen</TD></TR>";
-  $ostr = $ostr."<TD ALIGN=CENTER>".$Temp_Livingroom."</TD><TD ALIGN=CENTER>".$Temp_Hal."</TD><TD ALIGN=CENTER>".$Temp_Fishtank."</TD></TR>";
+  $ostr = $ostr."<TD ALIGN=CENTER>".$Temp_Livingroom."</TD><TD ALIGN=CENTER>".$Temp_Hal."</TD><TD ALIGN=CENTER>".$Temp_FishTank."</TD></TR>";
   $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"70\" ALIGN=CENTER>Bad</TD><TD ALIGN=CENTER>Slaap</TD><TD ALIGN=CENTER>Buiten</TD></TR>";
   $ostr = $ostr."<TD ALIGN=CENTER>".$Temp_Bathroom."</TD><TD ALIGN=CENTER>".$Temp_Bedroom."</TD><TD ALIGN=CENTER>".$Temp_Outside."</TD></TR></TABLE>";
 
