@@ -8,23 +8,23 @@
 // Output is JavaScript
 header( 'Content-Type: text/javascript', true );
 
-session_start();
+//session_start();
 
 // Set the Timezone, to make sure 'date()' does not complain.
 date_default_timezone_set('Europe/Brussels');
 
-$bForce = (empty($_REQUEST['force'])) ? 0 : 1;
+$bForce = (empty($_REQUEST['wait'])) ? 1 : 0;
 
 $xbmc_title = "";
 $xbmc_artist = "";
 $xbmc_current_time = "0:00";
 $xbmc_total_time = "0:00";
 
-getXBMCData();
+//getXBMCData();
 
 if ($xbmc_title == "")
 {
-  $Session_Electricity_Used = -1;
+/*  $Session_Electricity_Used = -1;
   $Session_Gas_Used = -1;
   $Session_Electricity_Usage = -1;
     
@@ -34,12 +34,16 @@ if ($xbmc_title == "")
     $Session_Gas_Used = $_SESSION['Gas_Used'];
     $Session_Electricity_Usage = $_SESSION['Electricity_Usage'];
   }
+  else
+  {
+    $bForce=1;
+  }*/
 
   // Get values from mysql datebase
   $mysqllink = mysql_connect(localhost, "domotica", "b-2020");
   mysql_select_db("domotica");
   $FirstRun=1;
-  $Timeout=5;
+  $Timeout=60;
 
 
   // Wait for a change in the database or a playing XMBC before continuing.
@@ -61,7 +65,6 @@ if ($xbmc_title == "")
     {
       $Timeout = 0;
     }
-
     getXBMCData();
 
     if ($bForce == 1) 
@@ -76,33 +79,35 @@ if ($xbmc_title == "")
     $FirstRun = 0;
   }
 
+//echo __LINE__."\n"; 
   if ($Electricity_Used != "")
   {
   // Get all the other values from the domotica database  if Gas_Used or Electricity_Used has changed, but only when XMBC is not playing...
-  if (($bForce) || ($Session_Electricity_Used != $Electricity_Used) || ($Session_Gas_Used != $Gas_Used) || ($xbmc_title != ""))
-  {
+//  if (($bForce) || ($Session_Electricity_Used != $Electricity_Used) || ($Session_Gas_Used != $Gas_Used) || ($xbmc_title != ""))
+  //{
     $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= timestampadd(hour, -1, now()) LIMIT 1");
     $Electricity_Used_Hour=$Electricity_Used - (mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2"));
     $Gas_Used_Hour=$Gas_Used - mysql_result($mysqlresult, 0, "gas_used");
     $Gas_Usage=$Gas_Used_Hour;
 
+
     $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= CURDATE() LIMIT 1");
     $Electricity_Used_Today=$Electricity_Used - (mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2"));
     $Gas_Used_Today=$Gas_Used - mysql_result($mysqlresult, 0, "gas_used");
 
-    $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= CURDATE()-7 LIMIT 1");
+    $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= DATE_SUB(CURDATE(),INTERVAL 7 DAY) LIMIT 1");
     $Electricity_Used_Week=$Electricity_Used - (mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2"));
     $Gas_Used_Week=$Gas_Used - mysql_result($mysqlresult, 0, "gas_used");
 
-    $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= CURDATE()-30 LIMIT 1");
+    $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= DATE_SUB(CURDATE(),INTERVAL 30 DAY) LIMIT 1");
     $Electricity_Used_Month=$Electricity_Used - (mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2"));
     $Gas_Used_Month=$Gas_Used - mysql_result($mysqlresult, 0, "gas_used");
 
-    $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= CURDATE()-365 LIMIT 1");
+    $mysqlresult = mysql_query("SELECT * FROM `energy` WHERE `timestamp` >= DATE_SUB(CURDATE(),INTERVAL 365 DAY) LIMIT 1");
     $Electricity_Used_Year=$Electricity_Used - (mysql_result($mysqlresult, 0, "kwh_used1") + mysql_result($mysqlresult, 0, "kwh_used2"));
     $Gas_Used_Year=$Gas_Used - mysql_result($mysqlresult, 0, "gas_used");
-  }
-  else
+   }
+/*  else
   {
     $Electricity_Used_Hour = $_SESSION['Electricity_Used_Hour'];
     $Gas_Used_Hour = $_SESSION['Gas_Used_Hour'];
@@ -143,27 +148,47 @@ if ($xbmc_title == "")
 
     $Electricity_Used_Year = 0;
     $Gas_Used_Year = 0;
-  }
+  }*/
+
 
   $mysqlresult = mysql_query('SELECT * FROM temperature  WHERE `timestamp` >= timestampadd(minute, -5, now()) ORDER BY id DESC LIMIT 1;');
   if (($mysqlresult) && (mysql_num_rows($mysqlresult)))
   {
-    $Temp_Livingroom=mysql_result($mysqlresult, 0, "temp_livingroom");
-    $Temp_Hal=mysql_result($mysqlresult, 0, "temp_hal");
-    $Temp_Outside=mysql_result($mysqlresult, 0, "temp_outside");
-    $Temp_FishTank=mysql_result($mysqlresult, 0, "temp_fishtank");
-    $Temp_Bathroom=mysql_result($mysqlresult, 0, "temp_bathroom");
-    $Temp_Bedroom=mysql_result($mysqlresult, 0, "temp_bedroom");
+    $Temp_Livingroom=nulltodash(mysql_result($mysqlresult, 0, "livingroom"));
+    $Temp_Hal=nulltodash(mysql_result($mysqlresult, 0, "hal"));
+    $Temp_Outside=nulltodash(mysql_result($mysqlresult, 0, "outside"));
+    $Temp_FishTank=nulltodash(mysql_result($mysqlresult, 0, "fishtank"));
+    $Temp_Bathroom=nulltodash(mysql_result($mysqlresult, 0, "bathroom"));
+    $Temp_Bedroom=nulltodash(mysql_result($mysqlresult, 0, "bedroom"));
+    $Temp_Woodburner=nulltodash(mysql_result($mysqlresult, 0, "woodburner"));
+    $Temp_Outside_Pond=nulltodash(mysql_result($mysqlresult, 0, "outside_pond"));
+    $Temp_Central_Heater_Water_In=nulltodash(mysql_result($mysqlresult, 0, "central_heater_water_in"));
+    $Temp_Central_Heater_Water_Out=nulltodash(mysql_result($mysqlresult, 0, "central_heater_water_out"));
+    $Temp_Freezer=nulltodash(mysql_result($mysqlresult, 0, "freezer"));
+    $Temp_Garage=nulltodash(mysql_result($mysqlresult, 0, "garage"));
+    $Temp_Fridge=nulltodash(mysql_result($mysqlresult, 0, "fridge"));
+    $Temp_Attic=nulltodash(mysql_result($mysqlresult, 0, "attic"));
   }
   else
   {
-    $Temp_Livingroom=0;
-    $Temp_Hal=0;
-    $Temp_Outside=0;
-    $Temp_FishTank=0;
-    $Temp_Bathroom=0;
-    $Temp_Bedroom=0;
+    $Temp_Livingroom="---";
+    $Temp_Hal="---";
+    $Temp_Outside="---";
+    $Temp_FishTank="---";
+    $Temp_Bathroom="---";
+    $Temp_Bedroom="---";
+    $Temp_Woodburner="---";
+    $Temp_Outside_Pond="---";
+    $Temp_Central_Heater_Water_In="---";
+    $Temp_Central_Heater_Water_Out="---";
+    $Temp_Freezer="---";
+    $Temp_Garage="---";
+    $Temp_Fridge="---";
+    $Temp_Attic="---";
   }
+  
+  
+  
   // Free resultset
   mysql_free_result($mysqlresult);
 
@@ -185,24 +210,36 @@ if (!empty($xbmc_title) && ($xbmc_title !== ""))
 else
 {
   // Print Temperatures
-  $ostr = "<TABLE BORDER=0 WIDTH=480 style=\"table-layout: fixed;\">";
-  $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"70\" ALIGN=CENTER>Living</TD><TD ALIGN=CENTER>Hal</TD><TD ALIGN=CENTER>Vissen</TD></TR>";
-  $ostr = $ostr."<TD ALIGN=CENTER>".$Temp_Livingroom."</TD><TD ALIGN=CENTER>".$Temp_Hal."</TD><TD ALIGN=CENTER>".$Temp_FishTank."</TD></TR>";
-  $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"70\" ALIGN=CENTER>Bad</TD><TD ALIGN=CENTER>Slaap</TD><TD ALIGN=CENTER>Buiten</TD></TR>";
-  $ostr = $ostr."<TD ALIGN=CENTER>".$Temp_Bathroom."</TD><TD ALIGN=CENTER>".$Temp_Bedroom."</TD><TD ALIGN=CENTER>".$Temp_Outside."</TD></TR></TABLE>";
+  $ostr = "";
+  $ostr = $ostr."<TABLE BORDER=0 WIDTH=470 CELLPADDING=0px CELLSPACING=0px ALIGN=LEFT style=\"table-layout: fixed; white-space: nowrap;\">";
+  $ostr = $ostr."<TR VALIGN=bottom  HEIGHT=\"60\"><TD ALIGN=CENTER>Zithoek</TD><TD ALIGN=CENTER>Hal</TD><TD ALIGN=CENTER>Garage</TD></TR>";
+  $ostr = $ostr."<TR VALIGN=top HEIGHT=\"30\"><TD ALIGN=CENTER>".htmlcolorvalue($Temp_Livingroom,10,12,15,21,23,25)."</TD><TD ALIGN=CENTER>".$Temp_Hal."</TD><TD ALIGN=CENTER>".$Temp_Garage."</TD></TR>";
+  $ostr = $ostr."<TR VALIGN=bottom  HEIGHT=\"60\"><TD ALIGN=CENTER>Bad</TD><TD ALIGN=CENTER>Slaap</TD><TD ALIGN=CENTER>Zolder</TD></TR>";
+  $ostr = $ostr."<TR VALIGN=top HEIGHT=\"30\"><TD ALIGN=CENTER>".htmlcolorvalue($Temp_Bathroom,10,12,15,21,23,25)."</TD><TD ALIGN=CENTER>".$Temp_Bedroom."</TD><TD ALIGN=CENTER>".$Temp_Attic."</TD></TR>";
+  $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"60\" ALIGN=CENTER>Vissen</TD><TD ALIGN=CENTER>Vijver</TD><TD ALIGN=CENTER>Buiten</TD></TR>";
+  $ostr = $ostr."<TR VALIGN=top HEIGHT=\"30\"><TD ALIGN=CENTER>".htmlcolorvalue($Temp_FishTank,20,22,24,28,30,33)."</TD><TD ALIGN=CENTER>".$Temp_Outside_Pond."</TD><TD ALIGN=CENTER>".$Temp_Outside."</TD></TR>";
+  $ostr = $ostr."<TR VALIGN=bottom><TD HEIGHT=\"60\" ALIGN=CENTER>Koeling</TD><TD ALIGN=CENTER>Vriezer</TD><TD ALIGN=CENTER>Cv</TD></TR>";
+  $ostr = $ostr."<TR VALIGN=top HEIGHT=70><TD ALIGN=CENTER>".htmlcolorvalue($Temp_Fridge,0,1,2,5,6,7)."</TD><TD ALIGN=CENTER>".htmlcolorvalue($Temp_Freezer,-35,-28,-25,-18,-15,-10)."</TD><TD ALIGN=CENTER>".$Temp_Central_Heater_Water_Out."</TD></TR></TABLE>";
 
 
   // Print Energy Usage
-  $ostr = $ostr."<BR><CENTER>Elektriciteitsverbruik</CENTER>";
-  $ostr = $ostr."<TABLE BORDER=0 WIDTH=480 style=\"table-layout: fixed;\">";
-  $ostr = $ostr."<TR><TD>".htmlcolorvalue($Electricity_Usage, 1000, 2000, 5000)."</TD><TD>".htmlcolorvalue($Electricity_Used_Today, 10, 20, 40)."</TD><TD>".htmlcolorvalue($Electricity_Used_Week, 69, 73, 77)."</TD><TD>".htmlcolorvalue($Electricity_Used_Month, 295, 312, 328)."</TD><TD>".htmlcolorvalue($Electricity_Used_Year, 3600, 3800, 4000)."</TD></TR></TABLE>";
+  $ostr = $ostr."Elektriciteitsverbruik";
+  $ostr = $ostr."<TABLE BORDER=0 WIDTH=470 CELLPADDING=0 CELLSPACING=0 ALIGN=LEFT style=\"table-layout: fixed; white-space: nowrap;\">";
+  $ostr = $ostr."<TR VALIGN=top HEIGHT=30><TD>".htmlcolorvalue($Electricity_Usage, -1, -1, -1, 1000, 2000, 5000)."</TD><TD>".htmlcolorvalue($Electricity_Used_Today, -1, -1, -1, 10, 20, 40)."</TD><TD>".htmlcolorvalue($Electricity_Used_Week, 0, 0, 0, 69, 73, 77)."</TD><TD>".htmlcolorvalue($Electricity_Used_Month, 0, 0, 0, 295, 312, 328)."</TD><TD>".htmlcolorvalue($Electricity_Used_Year, 0, 0, 0, 3600, 3800, 4000)."</TD></TR></TABLE>";
 
-  $ostr = $ostr."<BR><CENTER>Gasverbruik</CENTER>";
-  $ostr = $ostr."<TABLE BORDER=0 WIDTH=480 style=\"table-layout: fixed;\"><TR><TD>".htmlcolorvalue((round(($Gas_Usage)*1000)), 800, 1200, 1600)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Today), 10, 20, 40)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Week), 23, 27, 31)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Month), 100, 115, 130)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Year), 1200, 1400, 1600)."</TD></TR></TABLE>";
+  $ostr = $ostr."<BR>Gasverbruik";
+  $ostr = $ostr."<TABLE BORDER=0 WIDTH=470 CELLPADDING=0 CELLSPACING=0 ALIGN=LEFT style=\"table-layout: fixed; white-space: nowrap;\">";
+  $ostr = $ostr."<TR VALIGN=top HEIGHT=70><TD>".htmlcolorvalue((round(($Gas_Usage)*1000)), -1, -1, -1, 800, 1200, 1600)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Today,1), -1, -1, -1, 10, 20, 40)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Week), 0, 0, 0, 23, 27, 31)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Month), 0, 0, 0, 100, 115, 130)."</TD><TD>".htmlcolorvalue(round($Gas_Used_Year), 0, 0, 0, 1200, 1400, 1600)."</TD></TR></TABLE>";
+
+//  $Planning_Difference=match("Saldo_Total_Cashflow_Year_Difference","/tmp/externaldata.dat");
+//  $Planning_Difference_Percentage=match("Saldo_Total_Cashflow_Year_Difference_Percentage","/tmp/externaldata.dat");
+//  $ostr = $ostr."Planning";
+//  $ostr = $ostr."<TABLE BORDER=0 WIDTH=480 CELLPADDING=0 CELLSPACING=0 ALIGN=CENTER style=\"table-layout: fixed; white-space: nowrap;\">";
+//  $ostr = $ostr."<TR><TD>".htmlcolorvalue(round($Planning_Difference), 500, 200, 0)."</TD><TD>".htmlcolorvalue(round($Planning_Difference_Percentage), 10, 5, 0)."</TD><TD>".htmlcolorvalue(round(0), 23, 27, 31)."</TD><TD>".htmlcolorvalue(round(0), 100, 115, 130)."</TD><TD>".htmlcolorvalue(round(0), 1200, 1400, 1600)."</TD></TR></TABLE>";
 }
 
 // Write variables to session variable (This blocks other PHP processes so keep it short...
-$_SESSION['Electricity_Used_Hour']=$Electricity_Used_Hour;
+/*$_SESSION['Electricity_Used_Hour']=$Electricity_Used_Hour;
 $_SESSION['Gas_Used_Hour']=$Gas_Used_Hour;
 $_SESSION['Gas_Usage']=$Gas_Usage;
 
@@ -225,7 +262,7 @@ $_SESSION['Gas_Used']=$Gas_Used;
 
 session_write_close();
 
-
+*/
 // START OF OUTPUT JAVASCRIPT
 ?>
 $('#loadinfo').html( <?php echo javascriptQuote($ostr); ?> );
@@ -234,24 +271,17 @@ $('#loadinfo').html( <?php echo javascriptQuote($ostr); ?> );
 
 exit;
 
-
-/**
- *
- *
- * @param unknown $value
- * @param unknown $level1
- * @param unknown $level2
- * @param unknown $level3
- * @return unknown
- */
-function htmlcolorvalue($value, $level1, $level2, $level3)
+function htmlcolorvalue($value, $levellowcritical, $levellowwarning, $levellownotice, $levelhighnotice, $levelhighwarning, $levelhighcritical)
 {
-  if ($value < $level1) return $value;
-  else if ($value < $level2) return "<FONT COLOR=YELLOW>".$value."</FONT>";
-    else if ($value < $level3) return "<FONT COLOR=ORANGE>".$value."</FONT>";
-      return "<FONT COLOR=#FF6666>".$value."</FONT>";
+  if (!is_numeric($value)) return $value;
+  if ($value <= $levellowcritical) return "<FONT COLOR=#FF6666>".$value."</FONT>";
+  if ($value <= $levellowwarning) return "<FONT COLOR=ORANGE>".$value."</FONT>";
+  if ($value <= $levellownotice) return "<FONT COLOR=YELLOW>".$value."</FONT>";
+  if ($value >= $levelhighcritical) return "<FONT COLOR=FF6666>".$value."</FONT>";
+  if ($value >= $levelhighwarning) return "<FONT COLOR=ORANGE>".$value."</FONT>";
+  if ($value >= $levelhighnotice) return "<FONT COLOR=#YELLOW>".$value."</FONT>";
+  return $value;
 }
-
 
 /**
  *
@@ -314,6 +344,12 @@ function match($needle, $file)
   return $ret;
 }
 
+function nulltodash($input)
+{
+  if (empty($input)) return "---";
+  return $input;
+}
+
 
 /**
  * Reads data from XBMC and puts info to global variables
@@ -331,7 +367,7 @@ function getXBMCData()
   curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-type: application/json"));
   curl_setopt($curl, CURLOPT_POST, true);
   curl_setopt($curl, CURLOPT_POSTFIELDS, $content);
-
+  curl_setopt($curl, CURLOPT_TIMEOUT, 2); //timeout in seconds
   $json_response = curl_exec($curl);
   $bnba = $json_response;
 
